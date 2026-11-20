@@ -30,14 +30,14 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android SDK packages
         run: |
           sdkmanager --install \
-            "platform-tools" \
             "platforms;android-36" \
-            "platforms;android-36-ext1" \
             "build-tools;36.0.0"
 
       - name: Extract original project
@@ -74,4 +74,5 @@ jobs:
           name: Spare-Misr-APK
           path: project/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          
+
+        
