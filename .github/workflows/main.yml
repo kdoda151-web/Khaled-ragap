@@ -1,0 +1,77 @@
+
+name: Build Spare Misr APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "platforms;android-36-ext1" \
+            "build-tools;36.0.0"
+
+      - name: Extract original project
+        run: |
+          mkdir project
+          ARCHIVE=$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)
+          if [ -z "$ARCHIVE" ]; then
+            echo "Project ZIP not found"
+            exit 1
+          fi
+          unzip -q "$ARCHIVE" -d project
+          test -f project/settings.gradle.kts
+          test -f project/app/build.gradle.kts
+
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair \
+            -keystore project/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Build Android APK
+        run: |
+          gradle -p project --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spare-Misr-APK
+          path: project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          
